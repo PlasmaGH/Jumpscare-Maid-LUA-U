@@ -29,6 +29,7 @@ function module.add_Jumpscare(bin_Name:string)
 
 	local jumpscare__Rig = newBin.MainRig;
 	local jumpscare__Config = newBin.Config;
+	local jumpscare__Sounds = jumpscare__Config.Sounds
 
 	local rig_Actor = jumpscare__Config.Actor.Value
 
@@ -43,7 +44,7 @@ function module.add_Jumpscare(bin_Name:string)
 		LightColor = Color3.new(), -- Remove the weird outlines
 		BackgroundTransparency = 1, -- Remove background
 	}) :: ViewportFrame
-	
+
 	local Holder_WorldModel = Instance.new("WorldModel", {
 		Name = "$",
 		Parent = Jumpscare_ViewportFrame,
@@ -58,9 +59,9 @@ function module.add_Jumpscare(bin_Name:string)
 
 	Jumpscare_ViewportFrame.CurrentCamera = Jumpscare_Camera; -- Set CurrentCamera for Viewport
 	Jumpscare_ViewportFrame.Parent = module.viewportHolder; -- Set viewport parent
-	
+
 	newBin.Parent = Holder_WorldModel; -- Set bin's parent to WorldModel
-	
+
 	local signals = {	
 
 		--// Renderstepped Signal
@@ -70,27 +71,36 @@ function module.add_Jumpscare(bin_Name:string)
 
 		--// Animation Sound Event
 		jumpscare_Track:GetMarkerReachedSignal("Sound_Event"):Connect(function(soundData)
-			local instanceName, instanceVolume = string.split(soundData, "$")
+			
+			local instanceName, instanceVolume = unpack(string.split(soundData, "$"))
+			local newSound = jumpscare__Sounds[instanceName]
+			
+			newSound.PlayOnRemove = true;
+			newSound.Parent = game.Debris;
+			
+			newSound.Volume = instanceVolume and tonumber(instanceVolume) or newSound.Volume
+			newSound:Destroy();
+			
 		end)
 
 	}
 
 	local function cleanup()
-		
+
 		for index, signal in signals do
 			if signal.Connected then
 				signal:Disconnect();
 			end
 		end
-		
+
 		Jumpscare_ViewportFrame:Destroy()
 		newBin:Destroy();
-		
+
 	end
-	
+
 	jumpscare_Track:Play();
 	jumpscare_Track.Stopped:Once(cleanup);
-	
+
 end
 
 return module
