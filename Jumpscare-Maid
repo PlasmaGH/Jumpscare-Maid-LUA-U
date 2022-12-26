@@ -1,0 +1,96 @@
+-- Services
+local RunService = game:GetService("RunService")
+local PlayerService = game:GetService("Players")
+
+local LocalPlayer = PlayerService.LocalPlayer;
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 95)
+
+local JumpscareInstances = script.Parent:WaitForChild("JumpscareInstances") -- Script: https://github.com/PlasmaGH/Better-Instance-LUA
+
+local Instance = require(script:WaitForChild("Better-Instance-LUA"))
+
+local module = {
+
+	viewportHolder = Instance.new("ScreenGui", {
+		IgnoreGuiInset = true;
+		ResetOnSpawn = false;
+		Name = "_Test",
+		Parent = PlayerGui,
+	}),
+
+	signals = {}
+
+}
+
+function module.add_Jumpscare(bin_Name:string)
+
+	local newBin = JumpscareInstances[bin_Name]:Clone();
+	newBin.Parent = game;
+
+	local jumpscare__Rig = newBin.MainRig;
+	local jumpscare__Config = newBin.Config;
+
+	local rig_Actor = jumpscare__Config.Actor.Value
+
+	local jumpscare_Camera__Part = jumpscare__Rig.Jumpscare_Camera_Part
+
+	-- // Load new Track
+	local jumpscare_Track:AnimationTrack = rig_Actor:LoadAnimation(jumpscare__Config["Jumpscare_Animation"])
+
+	local Jumpscare_ViewportFrame = Instance.new("ViewportFrame", {
+		Size = UDim2.new(1, 0, 1, 0), -- Math the screen's size
+		Visible = true, -- Ensure it's visible
+		LightColor = Color3.new(), -- Remove the weird outlines
+		BackgroundTransparency = 1, -- Remove background
+	}) :: ViewportFrame
+	
+	local Holder_WorldModel = Instance.new("WorldModel", {
+		Name = "$",
+		Parent = Jumpscare_ViewportFrame,
+	})
+
+
+	local Jumpscare_Camera = Instance.new("Camera", {
+		CFrame = CFrame.new(),
+		Parent = Jumpscare_ViewportFrame,
+	}) :: Camera
+
+
+	Jumpscare_ViewportFrame.CurrentCamera = Jumpscare_Camera; -- Set CurrentCamera for Viewport
+	Jumpscare_ViewportFrame.Parent = module.viewportHolder; -- Set viewport parent
+	
+	newBin.Parent = Holder_WorldModel; -- Set bin's parent to WorldModel
+	
+	local signals = {	
+
+		--// Renderstepped Signal
+		RunService.RenderStepped:Connect(function()
+			Jumpscare_Camera.CFrame = jumpscare_Camera__Part.CFrame
+		end),
+
+		--// Animation Sound Event
+		jumpscare_Track:GetMarkerReachedSignal("Sound_Event"):Connect(function(soundData)
+			local instanceName, instanceVolume = string.split(soundData, "$")
+		end)
+
+	}
+
+	local function cleanup()
+		
+		for index, signal in signals do
+			if signal.Connected then
+				signal:Disconnect();
+			end
+		end
+		
+		Jumpscare_ViewportFrame:Destroy()
+		newBin:Destroy();
+		
+	end
+	
+	jumpscare_Track:Play();
+	jumpscare_Track.Stopped:Once(cleanup);
+	
+end
+
+return module
